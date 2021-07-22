@@ -36,9 +36,6 @@
 
 #include "defs.h"
 
-void initScreening(Screening & screening) ;
-
-void initRegularScreening(Screening & screening, Places & places, Params & params, default_random_engine generator, SimulationFiles & sf);
 
 void screeningStep(int real, int it, Screening & screening , Testing & testing, Population & city, Networks &contacts, Places & places,
 		Compartments &upd, Params & params,
