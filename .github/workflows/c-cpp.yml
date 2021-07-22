@@ -12,5 +12,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - names : checkout
+      uses : actions/checkout
     - name: make all
-      run: make all
+      run: make -f Makefile all
