@@ -387,8 +387,6 @@ int runRealisationWithSeeding (int real, Population & city, Networks & contacts,
     initTesting(testing, city);
 
     Screening screening;
-    initRegularScreening(screening, places, params,generator,simulationFiles);
-
 
     // seed - to avoid canceling
 	initSeed(city, params, generator,simulationFiles);
@@ -483,7 +481,6 @@ int runRealisationWithInvasion(int real, Population & city, Networks & contacts,
     initTesting(testing, city);
 
     Screening screening;
-    initRegularScreening(screening, places, params,generator,simulationFiles);
     // Compute initial prevalence
 
     // seed - we do this after to avoid cancelling seeds
@@ -688,7 +685,6 @@ void runRealisationForImmunity(int real, Population & city, Networks & contacts,
     Testing testing;
     initTesting(testing, city);
     Screening screening;
-    initRegularScreening(screening,places,  params,generator,simulationFiles);
     // Compute initial prevalence
     computePrevalence(0, epid, city,vaccination,testing);
 
