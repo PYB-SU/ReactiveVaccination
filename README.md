@@ -46,15 +46,22 @@ executable file is vaccination.exe
 # parameter file - list of all parameters
 input/params_test.csv
 
-#run demo
-# first unpack test.tgz in input/test
-gunzip input/test.tgz
-#prepare output directory
-mkdir src/output
-#run scenario on line 2 in params_test.txt
-./vaccination.exe -n2 -f filenames_test.txt
+# run demo
 
-#output
+## first unpack test.tgz in input/test
+
+>gunzip input/test.tgz
+
+## prepare output directory
+
+>mkdir src/output
+
+## run scenario on line 2 in params_test.txt
+
+>./vaccination.exe -n2 -f filenames_test.txt
+
+# output
+
 files in output/SCENARIO
 where SCENARIO 1st column in params_test.txt
 run time depend on repetitions
@@ -62,10 +69,13 @@ run time depend on repetitions
 ##############################
 # CITY
 ##############################
-  data used in the paper are in input/city
-  bunzip2 input/city/city.tgz
+
+data used in the paper are in input/city
+
+> bunzip2 input/city/city.tgz
  
-#run scenario on line 2 in params_city.txt
-./vaccination.exe -n2 -f filenames_city.txt
+run scenario on line 2 in params_city.txt
+
+>./vaccination.exe -n2 -f filenames_city.txt
  
  
