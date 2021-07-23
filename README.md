@@ -62,7 +62,7 @@ first unpack test.tgz in input/test
 
 ### run scenario on line 2 in params_test.txt
 
->./vaccination.exe -n2 -f filenames_test.txt
+>./vaccination.exe -n2 -f input/filenames_test.txt
 
 ### output
 
@@ -80,6 +80,6 @@ data used in the paper are in input/city
  
 run scenario on line 2 in params_city.txt
 
->./vaccination.exe -n2 -f filenames_city.txt
+>./vaccination.exe -n2 -f input/filenames_city.txt
  
  
