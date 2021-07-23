@@ -62,8 +62,8 @@ run time depend on repetitions
 ##############################
 # CITY
 ##############################
- # data used in the paper are in input/city
- # bunzip2 input/city/city.tgz
+  data used in the paper are in input/city
+  bunzip2 input/city/city.tgz
  
 #run scenario on line 2 in params_city.txt
 ./vaccination.exe -n2 -f filenames_city.txt
