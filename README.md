@@ -46,6 +46,10 @@ get help
 
 > -j 0 (random seed) / 1 (seed only exposed) / 2 (seed exposed and others) / 3 (seed all exposed file) / 4 (same as 2 but random)
 
+> -e NCOMP splits the E/P1/P2 compartments in NCOMP sub-compartments
+
+> -v NCOMP splits the vS_LOW/vS_MID compartments in NCOMP sub-compartments
+  
 parameter file - list of all parameters
 
 >input/params_test.csv
