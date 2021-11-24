@@ -2,7 +2,7 @@
     Simulation of an ABM for COVID-19
     @file main.cpp
     @author Pierre-Yves Boelle, Chiara Poletto
-    @acknowledgment Jésus A Moreno López for first version fo the code
+    @acknowledgment Jesus Moreno for first version
     @version 1.0 2020-04-16
     @license GPL-3.0-or-later
 */
@@ -114,38 +114,38 @@ void countCasesInWorkingPlacesAndSchools(int it, Compartments & upd, Screening &
  */
 void computePrevalence(int t, Compartments & epid, Population & city, Vaccination & vaccination, Testing & testing) {
 	// take status and count
-	epid.S[t] = counter(city.status,0);
-	epid.E[t] = counter(city.status,10);
-	epid.P1[t] = counter(city.status,101);
-	epid.SI[t] = counter(city.status,12);
-	epid.P2[t] = counter(city.status,102);
-	epid.AI[t] = counter(city.status,13);
-	epid.R[t] = counter(city.status,2);
-	epid.wvS[t] = counter(city.status,909) + counter(city.status,908);
-	epid.vS[t] = counter(city.status,90);
-	epid.vE[t] = counter(city.status,910);
-	epid.vP1[t] = counter(city.status,9101);
-	epid.vSI[t] = counter(city.status,912);
-	epid.vP2[t] = counter(city.status,9102);
-	epid.vAI[t] = counter(city.status,913);
-	epid.vR[t] = counter(city.status,92);
+	epid.S[t] = counter(city.status,STATUS_S);
+	epid.E[t] = counter(city.status,STATUS_E);
+	epid.P1[t] = counter(city.status,STATUS_P1);
+	epid.SI[t] = counter(city.status,STATUS_SI);
+	epid.P2[t] = counter(city.status,STATUS_P2);
+	epid.AI[t] = counter(city.status,STATUS_AI);
+	epid.R[t] = counter(city.status,STATUS_R);
+	epid.wvS[t] = counter(city.status,STATUS_vS_MID) + counter(city.status,STATUS_vS_LOW);
+	epid.vS[t] = counter(city.status,STATUS_vS_FUL);
+	epid.vE[t] = counter(city.status,STATUS_vE);
+	epid.vP1[t] = counter(city.status,STATUS_vP1);
+	epid.vSI[t] = counter(city.status,STATUS_vSI);
+	epid.vP2[t] = counter(city.status,STATUS_vP2);
+	epid.vAI[t] = counter(city.status,STATUS_vAI);
+	epid.vR[t] = counter(city.status,STATUS_vR);
 	epid.isolated[t] = counter(city.isolation[t],1);
 
 	vector<int> tmp;
 	tmp.resize(city.N_use);
 	// compute infected in WPs
 	for (int i =0; i<city.N_use; i++) {
-		tmp[i] = (city.status[i]!=0 && city.status[i]!=90 && city.status[i]!=908 && city.status[i]!=909 && city.status[i]!=2 && city.status[i]!=92)*city.has_WP[i];
+		tmp[i] = (city.status[i]!=STATUS_S && city.status[i]!=STATUS_vS_FUL && city.status[i]!=STATUS_vS_LOW && city.status[i]!=STATUS_vS_MID && city.status[i]!=STATUS_R && city.status[i]!=STATUS_vR)*city.has_WP[i];
 	}
 	epid.WP_infected[t]=counter(tmp,1);
 	// compute infected in schools
 	for (int i =0; i<city.N_use; i++) {
-		tmp[i] = (city.status[i]!=0 && city.status[i]!=90 && city.status[i]!=908 && city.status[i]!=909 && city.status[i]!=2 && city.status[i]!=92)*city.has_school[i];
+		tmp[i] = (city.status[i]!=STATUS_S && city.status[i]!=STATUS_vS_FUL && city.status[i]!=STATUS_vS_LOW && city.status[i]!=STATUS_vS_MID && city.status[i]!=STATUS_R && city.status[i]!=STATUS_vR)*city.has_school[i];
 	}
 	epid.S_infected[t]=counter(tmp,1);
 	// compute isolated and infected
 	for (int i =0; i<city.N_use; i++) {
-		tmp[i] = (city.status[i]!=0 && city.status[i]!=90 && city.status[i]!=908 && city.status[i]!=909 && city.status[i]!=2 && city.status[i]!=92 )*city.isolation[t][i];
+		tmp[i] = (city.status[i]!=STATUS_S && city.status[i]!=STATUS_vS_FUL && city.status[i]!=STATUS_vS_LOW && city.status[i]!=STATUS_vS_MID && city.status[i]!=STATUS_R && city.status[i]!=STATUS_vR )*city.isolation[t][i];
 	}
 	epid.infected_and_isolated[t] = counter(tmp,1);
 
@@ -157,7 +157,7 @@ void computePrevalence(int t, Compartments & epid, Population & city, Vaccinatio
 	    // 90 is susceptible, 910 is exposed,  9101 pre-symptomatic(1), 912 symptomatic,
 	    // 9102 pre-symptomatic(2),  913 asymptomatic, 92 is recovered.
 	for (int i =0; i<city.N_use; i++) {
-		tmp[i] = (city.status[i]!=0 && city.status[i]!=90 && city.status[i]!=908 && city.status[i]!=909 && city.status[i]!=2 && city.status[i]!=92);
+		tmp[i] = (city.status[i]!=STATUS_S && city.status[i]!=STATUS_vS_FUL && city.status[i]!=STATUS_vS_LOW && city.status[i]!=STATUS_vS_MID && city.status[i]!=STATUS_R && city.status[i]!=STATUS_vR);
 	}
 	epid.infected[t] = counter(tmp,1);
 
@@ -175,7 +175,6 @@ void computePrevalence(int t, Compartments & epid, Population & city, Vaccinatio
 	epid.found_by_reactive_screening[t] = counter(testing.found_in[REACTIVE_SCREENING],1);
 }
 
-
 /**
  *
  * Compute incidence as number in update
@@ -183,10 +182,15 @@ void computePrevalence(int t, Compartments & epid, Population & city, Vaccinatio
  */
 void computeIncidence(int real, int it, Incidences & incidence, Compartments & upd) {
     //update computed above in transmission
+	//only count if stepInf == 1 for E, P1,P2, vE, vP1, vP2
+	//superseded in updateCompartments
+	incidence.E[real][it] = upd.E.size();
      incidence.P1[real][it] = upd.P1.size();
-     incidence.SI[real][it] = upd.SI.size();
      incidence.P2[real][it] = upd.P2.size();
+     incidence.SI[real][it] = upd.SI.size();
      incidence.AI[real][it] = upd.AI.size();
+
+     incidence.vE[real][it] = upd.vE.size();
      incidence.vP1[real][it] = upd.vP1.size();
      incidence.vSI[real][it] = upd.vSI.size();
      incidence.vP2[real][it] = upd.vP2.size();
@@ -198,53 +202,123 @@ void computeIncidence(int real, int it, Incidences & incidence, Compartments & u
  * actually update transmission after transitions have been decided
  *
  */
-void updateCompartments(int real, int it, Compartments & upd, Population & city, Vaccination & vaccination,
+void updateCompartments(int real, int it, Compartments & upd, Population & city, Incidences & incidence, Vaccination & vaccination, Params & params,
 		SimulationFiles & simulationFiles) {
 
+    //if stepVax is not reached yet, remain in the same vax compartment, otherwise enter next and set stepVax to 0
 	for (int uppvS: upd.vS)
-	 {
-		 if (city.status[uppvS]==908) {
-			 vaccination.vaccinated[uppvS]=VAX_MID;
-			 city.status[uppvS]=909;
-		 } else if (city.status[uppvS]==909) {
-			 vaccination.vaccinated[uppvS]=VAX_FUL;
-			 city.status[uppvS]=90;
+	{
+		// if stepVax not reached, remain in same compartment
+		if (city.stepVax[uppvS] < params.nbSplitVax) {
+			city.stepVax[uppvS]++;
+		} else {
+			if (city.status[uppvS]==STATUS_vS_LOW) {
+				vaccination.vaccinated[uppvS]=VAX_MID;
+				city.status[uppvS]=STATUS_vS_MID;
+				city.stepVax[uppvS]=1;
+			} else if (city.status[uppvS]==STATUS_vS_MID) {
+				vaccination.vaccinated[uppvS]=VAX_FUL;
+				city.status[uppvS]=STATUS_vS_FUL;
+				city.stepVax[uppvS]=0;
+			}
+		}
+	}
+	 for (int upe: upd.E) {
+		 city.status[upe]=STATUS_E;
+		 city.stepInf[upe]=1;
+		 incidence.E[real][it]++;
+	 }
+	 for (int upe: upd.vE) {
+		 city.status[upe]=STATUS_vE;
+		 city.stepInf[upe]=1;
+		 incidence.vE[real][it]++;
+	 }
+	 for (int upp1: upd.P1) {
+		 // entering from E remain in E if they did not go through all steps
+		 if (city.stepInf[upp1] < params.nbSplitInf){
+			 city.stepInf[upp1]++; //remain E, but advance in steps
+		 } else {//otherwise goto P1
+			 city.status[upp1]=STATUS_P1; //become P1
+			 city.stepInf[upp1]=1; // and enter first stage
+			 incidence.P1[real][it]++;
 		 }
 	 }
-	 for (int upe: upd.E)
-		 city.status[upe]=10;
-	 for (int upe: upd.vE)
-		 city.status[upe]=910;
-	 for (int upp1: upd.P1)
-		 city.status[upp1]=101;
-	 for (int upp2: upd.P2)
-		 city.status[upp2]=102;
+	 for (int upp2: upd.P2) { //same as above
+		 if (city.stepInf[upp2] < params.nbSplitInf){
+			 city.stepInf[upp2]++;
+		 } else {
+			 city.status[upp2]=STATUS_P2;
+			 city.stepInf[upp2]=1;
+			 incidence.P2[real][it]++;
+		 }
+	 }
 	 for (int upsi: upd.SI) {
-		 city.status[upsi]=12;
-		 city.onset_time[upsi]=it;
-		 simulationFiles.symptom_list_file << upsi << "," << city.Age[upsi]  << ","<< vaccination.vaccinated[upsi] << "," << it << "," << real << endl;
+		 //those entering from P1 remain in P1 if they did not go through all steps
+		 if (city.stepInf[upsi] < params.nbSplitInf) {
+			 city.stepInf[upsi]++;
+		 } else {
+			 city.status[upsi]=STATUS_SI;
+			 city.stepInf[upsi]=0;
+			 incidence.SI[real][it]++;
+			 city.onset_time[upsi]=it;
+			 simulationFiles.symptom_list_file << upsi << "," << city.Age[upsi]  << ","<< vaccination.vaccinated[upsi] << "," << it << "," << real << endl;
+		 }
 	 }
 	 for (int upai: upd.AI) {
-		 city.status[upai]=13;
-		 simulationFiles.asymptom_list_file << upai << "," << city.Age[upai]  << "," <<vaccination.vaccinated[upai] << "," << it << "," << real << endl;
+		 //thos entering from P2 remain in P2 if they did not goo thru all steps
+		 if (city.stepInf[upai]<params.nbSplitInf) {
+			 city.stepInf[upai]++;
+		 } else {
+			 city.status[upai]=STATUS_AI;
+			 city.stepInf[upai]=0;
+			 incidence.AI[real][it]++;
+			 simulationFiles.asymptom_list_file << upai << "," << city.Age[upai]  << "," <<vaccination.vaccinated[upai] << "," << it << "," << real << endl;
+		 }
 	 }
 	 for (int upr: upd.R)
-		 city.status[upr]=2;
-	 for (int upp1: upd.vP1)
-		 city.status[upp1]=9101;
-	 for (int upp2: upd.vP2)
-		 city.status[upp2]=9102;
+		 city.status[upr]=STATUS_R;
+
+	 for (int upp1: upd.vP1) {
+		 if (city.stepInf[upp1] < params.nbSplitInf){
+			 city.stepInf[upp1]++;
+		 } else {
+			 city.status[upp1]=STATUS_vP1;
+			 city.stepInf[upp1]=1;
+			 incidence.vP1[real][it]++;
+		 }
+	 }
+	 for (int upp2: upd.vP2) {
+		 if (city.stepInf[upp2] < params.nbSplitInf){
+			 city.stepInf[upp2]++;
+		 } else {
+			 city.status[upp2]=STATUS_vP2;
+			 city.stepInf[upp2]=1;
+			 incidence.vP2[real][it]++;
+		 }
+	 }
 	 for (int upsi: upd.vSI) {
-		 city.status[upsi]=912;
-		 city.onset_time[upsi]=it;
-		 simulationFiles.symptom_list_file << upsi << "," << city.Age[upsi]  << ","<< vaccination.vaccinated[upsi]  <<"," << it << "," << real << endl;
+		 if (city.stepInf[upsi]<params.nbSplitInf) {
+			 city.stepInf[upsi]++;
+		 } else {
+			 city.status[upsi]=STATUS_vSI;
+			 city.stepInf[upsi]=0;
+			 incidence.vSI[real][it]++;
+			 city.onset_time[upsi]=it;
+			 simulationFiles.symptom_list_file << upsi << "," << city.Age[upsi]  << ","<< vaccination.vaccinated[upsi]  <<"," << it << "," << real << endl;
+		}
 	 }
 	 for (int upai: upd.vAI) {
-		 city.status[upai]=913;
-		 simulationFiles.asymptom_list_file << upai << "," << city.Age[upai]  << ","<< vaccination.vaccinated[upai]  <<"," << it << "," << real << endl;
+		 if (city.stepInf[upai]<params.nbSplitInf) {
+			 city.stepInf[upai]++;
+		 } else {
+			 city.status[upai]=STATUS_vAI;
+			 city.stepInf[upai]=0;
+			 incidence.vAI[real][it]++;
+			 simulationFiles.asymptom_list_file << upai << "," << city.Age[upai]  << ","<< vaccination.vaccinated[upai]  <<"," << it << "," << real << endl;
+		 }
 	 }
 	 for (int upr: upd.vR)
-		 city.status[upr]=92;
+		 city.status[upr]=STATUS_vR;
 
 	 // update detection, isolation, ct_done
 	// copy isolation, detection, etc. status from prev timestep
@@ -281,23 +355,47 @@ void updateCompartmentsWithFiltering(int real, int it, Compartments & upd, Popul
 	if (typeComputeImmunity ==1) maxInf *= params.init_incid_100000/100000;
 	if ((int) upd.E.size() < maxInf) maxInf = upd.E.size();
 	simulationFiles.miscellaneous_file << "time " << it << " infected " << maxInf << " out of " << upd.E.size() <<endl;
-	for (int k=0; k < maxInf; k++)
-		 city.status[upd.E[k]]=10;
-	 for (int upp1: upd.P1)
-		 city.status[upp1]=101;
-	 for (int upp2: upd.P2)
-		 city.status[upp2]=102;
+	for (int k=0; k < maxInf; k++) {
+		city.status[upd.E[k]]=STATUS_E;
+		city.stepInf[upd.E[k]]=1;
+	}
+	 for (int upp1: upd.P1) {
+		 if (city.stepInf[upp1] < params.nbSplitInf) {
+			 city.stepInf[upp1]++;
+		 } else {
+			 city.status[upp1]=STATUS_P1;
+			 city.stepInf[upp1]=1;
+		 }
+	 }
+	 for (int upp2: upd.P2) {
+		 if (city.stepInf[upp2] < params.nbSplitInf) {
+			 city.stepInf[upp2]++;
+		 } else {
+			 city.status[upp2]=STATUS_P2;
+			 city.stepInf[upp2]=1;
+		 }
+	 }
 	 for (int upsi: upd.SI) {
-		 city.status[upsi]=12;
-		 city.onset_time[upsi]=it;
-		 simulationFiles.symptom_list_file << upsi << "," << city.Age[upsi]  << "," << vaccination.vaccinated[upsi] << "," << it << "," << real << endl;
+		 if (city.stepInf[upsi] < params.nbSplitInf) {
+			 city.stepInf[upsi]++;
+		 } else {
+			 city.status[upsi]=STATUS_SI;
+			 city.stepInf[upsi]=0;
+			 city.onset_time[upsi]=it;
+			 simulationFiles.symptom_list_file << upsi << "," << city.Age[upsi]  << "," << vaccination.vaccinated[upsi] << "," << it << "," << real << endl;
+		 }
 	 }
 	 for (int upai: upd.AI) {
-		 city.status[upai]=13;
-		 simulationFiles.asymptom_list_file << upai << "," << city.Age[upai]  << "," << vaccination.vaccinated[upai] << "," << it << "," << real << endl;
+		 if (city.stepInf[upai] < params.nbSplitInf) {
+			 city.stepInf[upai]++;
+		 } else {
+			 city.status[upai]=STATUS_AI;
+			 city.stepInf[upai]=0;
+			 simulationFiles.asymptom_list_file << upai << "," << city.Age[upai]  << "," << vaccination.vaccinated[upai] << "," << it << "," << real << endl;
+		 }
 	 }
 	 for (int upr: upd.R)
-		 city.status[upr]=2;
+		 city.status[upr]=STATUS_R;
 
 	 // update detection, isolation, ct_done
 	// copy isolation, detection, etc. status from prev timestep
@@ -337,11 +435,11 @@ void dischargeFromIsolation(int it,Population & city,
     		 // if infected (not susceptible not recovered)
     		 if (
     				 //infected not symptomatic isolated for > dur_isol_inf
-    				 ((status!=0 && status!=90 && status!=909 && status!=908 && status!=2 && status!=912 ) && (durIsol> params.dur_isol_inf)) ||
+    				 ((status!=STATUS_S && status!=STATUS_vS_FUL && status!=STATUS_vS_MID && status!=STATUS_vS_LOW && status!=STATUS_R && status!=STATUS_vR ) && (durIsol> params.dur_isol_inf)) ||
 							 //not infected isolated for > dur_isol_sus
-							 ((status==0 || status==90 || status==909 || status == 908) && (durIsol> params.dur_isol_sus)) ||
+							 ((status==STATUS_S || status==STATUS_vS_FUL || status==STATUS_vS_MID || status == STATUS_vS_LOW) && (durIsol> params.dur_isol_sus)) ||
 									 //recovered isolated for > dur_isol_rec
-									 ((status==2 || status==902) && (durIsol> params.dur_isol_rec))
+									 ((status==STATUS_R || status==STATUS_vR) && (durIsol> params.dur_isol_rec))
     		 )
     		 {
     			 //release from isolation
@@ -349,7 +447,7 @@ void dischargeFromIsolation(int it,Population & city,
     			 city.iso_time[i]=0;
     		 }
     		 // If a node is isolated and is not a clinical case (either vaccinated or not) it may skip isolation
-    		 if (distribution(generator)<params.skip_iso && status!=12 && status!=912)
+    		 if (distribution(generator)<params.skip_iso && status!=STATUS_SI && status!=STATUS_vSI)
     		 {
     			 city.isolation[it][i]=0;
     			 city.iso_time[i]=0;
@@ -387,6 +485,8 @@ int runRealisationWithSeeding (int real, Population & city, Networks & contacts,
     initTesting(testing, city);
 
     Screening screening;
+    initRegularScreening(screening, places, params,generator,simulationFiles);
+
 
     // seed - to avoid canceling
 	initSeed(city, params, generator,simulationFiles);
@@ -425,14 +525,14 @@ int runRealisationWithSeeding (int real, Population & city, Networks & contacts,
 		//this must be done after update is filled in
 		countCasesInWorkingPlacesAndSchools(t, update, screening, vaccination, city, places, params);
         // apply updats to city
-		updateCompartments(real, t, update, city,vaccination,simulationFiles);
+		updateCompartments(real, t, update, city,incidence, vaccination,params, simulationFiles);
 	    // get out of isolation - moved back here for updates
 	    dischargeFromIsolation(t, city, params, generator);
 
 		//compute current prevalence
 		computePrevalence(t, epid, city,vaccination, testing);
-		// compute incidence
-		computeIncidence (real,t, incidence, update);
+//		// compute incidence
+//		computeIncidence (real,t, incidence, update);
 
 		//END OF TIMESTEP
 
@@ -481,6 +581,7 @@ int runRealisationWithInvasion(int real, Population & city, Networks & contacts,
     initTesting(testing, city);
 
     Screening screening;
+    initRegularScreening(screening, places, params,generator,simulationFiles);
     // Compute initial prevalence
 
     // seed - we do this after to avoid cancelling seeds
@@ -506,7 +607,7 @@ int runRealisationWithInvasion(int real, Population & city, Networks & contacts,
 	int status_first=0;
 
 	// store original parameters that may be changed
-	int orig_skip_iso = params.skip_iso ;
+	double orig_skip_iso = params.skip_iso ;
 	double orig_p_c_HH = params.p_c_HH ;
 	double orig_p_rA = params.p_rA ;
 	double orig_p_rS = params.p_rS ;
@@ -583,15 +684,15 @@ int runRealisationWithInvasion(int real, Population & city, Networks & contacts,
 		//this must be done after update is filled in
 		countCasesInWorkingPlacesAndSchools(t, update, screening, vaccination, city, places, params);
         // apply updates to city
-		updateCompartments(real, t, update, city,vaccination,simulationFiles);
+		updateCompartments(real, t, update, city, incidence, vaccination,params, simulationFiles);
 	    // get out of isolation - moved back here for updates
 	    dischargeFromIsolation(t, city, params, generator);
 
 		//compute current prevalence
 		computePrevalence(t, epid, city,vaccination, testing);
 
-		// compute incidence
-		computeIncidence (nSim,t, incidence, update);
+		// compute incidence - moved to update Compartments
+//		computeIncidence (nSim,t, incidence, update);
 
 		// check for extinction
 		if (epid.infected[t]==0 && epid.infected[t-1]>0) {
@@ -685,6 +786,7 @@ void runRealisationForImmunity(int real, Population & city, Networks & contacts,
     Testing testing;
     initTesting(testing, city);
     Screening screening;
+    initRegularScreening(screening,places,  params,generator,simulationFiles);
     // Compute initial prevalence
     computePrevalence(0, epid, city,vaccination,testing);
 
@@ -697,6 +799,10 @@ void runRealisationForImmunity(int real, Population & city, Networks & contacts,
     int t=0;
     while (cont == 0) {
     	t++;
+    	if (t == params.max_steps) {
+    		cont=1;
+    		cout << "max_steps reached before " << next_prev << "% immunity. run with -i X -t max_steps to reach higher prevalences." <<endl;
+    	}
         // Create empty variables to update nodes' status
 		Compartments update;
 		// Update status of infected people and infect susceptibles
@@ -779,7 +885,7 @@ void addToAllEpid(Compartments & allEpids, Compartments & epid, Params & params)
 }
 
 
-#define OPTIONS "hs:n:f:i:j:x:"
+#define OPTIONS "hs:n:f:i:j:x:e:v:t:"
 
 /**
  *
@@ -798,6 +904,10 @@ int main(int argc, char* argv[]) {
     int computeImmunity=0;
     int typeComputeImmunity=0;
     int n_start_reactive=0;
+    int nbSplitInf=1;
+    int nbSplitVax=1;
+    int max_steps_read=0;
+
     // Retrieve the options:
     while ( (opt = getopt(argc, argv, OPTIONS)) != -1 ) {  // for each option...
     	switch ( opt ) {
@@ -808,7 +918,10 @@ int main(int argc, char* argv[]) {
     		cout <<	"\t-s SEED sets random seed to SEED (0 for time)"<<endl;
 			cout << "\t-f FILENAME for input (default filenames.txt)"<<endl;
 			cout <<"\t-i 0 for computing (natural) initial immunity/ -i 1 constrained to max incidence"<<endl;
+			cout <<"\t-t TMAX replaces max_steps for the computation of immunity"<<endl;
 			cout << "\t-j 0 (random seed) / 1 (seed only exposed) / 2 (seed exposed and others) / 3 (seed all exposed file) / 4 (same as 2 but random)" <<endl;
+			cout << "\t-e NCOMP splits the E/P1/P2 compartments (default 1)"<<endl;
+			cout << "\t-v NCOMP splits of the vS_LOW/vS_MID compartments (default 1)"<<endl;
 			exit(1);
     	case 's':
     		seed = atoi(optarg);
@@ -826,6 +939,10 @@ int main(int argc, char* argv[]) {
     		computeImmunity=1;
     		cout << "computing immunity type " <<typeComputeImmunity <<endl; ;
     		break;
+    	case 't' :
+    		max_steps_read = atoi(optarg);
+    		cout << "scenario max_steps will be replaced by "<< max_steps_read << endl;
+    		break;
     	case 'j' :
     		typeSeeding = atoi(optarg);
     		cout << "seeding is type " << typeSeeding <<endl;
@@ -836,6 +953,14 @@ int main(int argc, char* argv[]) {
     		n_start_reactive = atoi(optarg);
     		cout << "start reactive vaccination after " << n_start_reactive << " cases"<<endl;
     		break;
+    	case 'e' :
+    		nbSplitInf=atoi(optarg);
+    		cout << "split Inf set to " << nbSplitInf <<endl;
+    		break;
+    	case 'v' :
+    	    nbSplitVax=atoi(optarg);
+    		cout << "split Vax set to " << nbSplitVax <<endl;
+    	    break;
 		case '?' :
     		cout << "unknown option" <<endl;
     		exit(1);
@@ -864,6 +989,9 @@ int main(int argc, char* argv[]) {
     default_random_engine generator(seed_gen); //Random number itialisaton
     uniform_real_distribution<double> distribution(0,1); //Intialisation of the uniform distribution between 0 and 1
 
+    cout << "compartments vLOW/vMID split in " << nbSplitVax << " steps" <<endl;
+	cout << "compartments E/P1/P2 split in " << nbSplitInf <<  " steps" <<endl;
+
     	//pointer to realisation function
     int (* runRealisation) (int, Population & , Networks & , Places &,
     		Compartments & , Incidences & ,
@@ -890,9 +1018,16 @@ int main(int argc, char* argv[]) {
     mapParams.insert({"pct_rand_init_immunity",1./3.});
     mapParams.insert({"n_start_reactive",n_start_reactive});
     // change to list
+    params.nbSplitInf = nbSplitInf; // set up splits to compute rates in convertParams
+    params.nbSplitVax = nbSplitVax; // set up splits to compute rates in convertParams
     convertParams( params, mapParams);
     params.typeSeeding = typeSeeding;
     params.computeImmunity = computeImmunity;
+    // replace max_steps if required
+    if ((computeImmunity == 1) & (max_steps_read >0)) {
+    	params.max_steps = max_steps_read;
+    }
+
 
     //
     if (simulInvasion == 1) {
@@ -918,8 +1053,6 @@ int main(int argc, char* argv[]) {
        }
     printParams(params);
 //to check
-    // to store :
-    Params origParams = params;
 
     // READ AND INITIALISE POPULATION PROPERTIES - AGE SUSCEPTIBILITY ASYMPTO IMMUNITY
     int numFirstIndv; //number of first indiv

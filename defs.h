@@ -55,7 +55,6 @@ typedef struct FILENAMES {
 	string susceptibilityfile;
 	string subclinicalfile;
 	string subclinicalVaccinatedfile;
-	string invasionfile;
 } Filenames;
 
 
@@ -118,12 +117,30 @@ typedef struct FILES {
 	ofstream reactive_vaccination_file;
 } SimulationFiles;
 
+#define STATUS_S 0
+#define STATUS_E 10
+#define STATUS_E2 10
+#define STATUS_P1 101
+#define STATUS_P2 102
+#define STATUS_SI 12
+#define STATUS_AI 13
+#define STATUS_R 2
+#define STATUS_vS_LOW 908
+#define STATUS_vS_MID 909
+#define STATUS_vS_FUL 90
+#define STATUS_vE 910
+#define STATUS_vP1 9101
+#define STATUS_vP2 9102
+#define STATUS_vSI 912
+#define STATUS_vAI 913
+#define STATUS_vR 92
+
 typedef struct COMPARTMENTS {
 	/// COMPARTMENTS are either for time series WHEN USED as epid
 	// also used to store individual numbers in update
-	vector<int> S;
-    vector<int> E;
-    vector<int> P1;
+	vector<int> S; //0
+    vector<int> E; //10
+    vector<int> P1; //
     vector<int> P2;
     vector<int> SI;
     vector<int> AI;
@@ -166,13 +183,16 @@ typedef struct COMPARTMENTS {
 //---------------------------------------
 
 typedef struct INCIDENCES {
+
+	vector<vector<int>> E;
 	vector<vector<int>> P1;
 	vector<vector<int>> SI;
 	vector<vector<int>> P2;
 	vector<vector<int>> AI;
+	vector<vector<int>> vE;
 	vector<vector<int>> vP1;
-	vector<vector<int>> vSI;
 	vector<vector<int>> vP2;
+	vector<vector<int>> vSI;
 	vector<vector<int>> vAI;
 } Incidences;
 
@@ -200,6 +220,8 @@ typedef struct PLACES {
     set<string> universities;
 } Places;
 
+
+
 typedef struct POPULATION {
 	//nombre de personnes
     int N_use;
@@ -214,14 +236,12 @@ typedef struct POPULATION {
     vector<double> va_propor;
     ////////////////////////DYNAMIC
     //Current status
-    vector<int> status;
-    // 0 is susceptible, 10 is exposed, 101 pre-symptomatic(1), 12 symptomatic,
-    //102 pre-symptomatic(2), 13 asymptomatic, 2 is recovered.
-    // Waiting for vaccine to act: 908
-    // primoVaccinated : 909
-    // Vaccination status numbers:
-    // 90 is susceptible, 910 is exposed,  9101 pre-symptomatic(1), 912 symptomatic,
-    // 9102 pre-symptomatic(2),  913 asymptomatic, 92 is recovered.
+    vector<int> status; // now filled with STATUS_
+    // 0 is susceptible (S), 10 is exposed (E), 101 pre-symptomatic(P1), 102 pre-symptomatic(P2), 12 symptomatic (SI),  13 asymptomatic (AI), 2 is recovered (R).
+    // Vaccinated susceptibles are 908 (LOW), 909 (MID), 90 (FUL)
+    // 910 is exposed (vE),  9101 pre-symptomatic(vP1), 912 symptomatic(vAI), 9102 pre-symptomatic(vP2),  913 asymptomatic (vSI), 92 is recovered (vR).
+    vector<int> stepInf; // split E, P1 and P2 in 2 compartments - 0 upon entering, 1 to enter second step
+    vector<int> stepVax; // split vAX_LOW, VAX_MID in 2 compartments; 0 upon entering, 1 to enter second step
     //status read in file immunity
     vector<int> status_file;
     //status read in file immunity
@@ -257,6 +277,8 @@ typedef struct PARAMS {
 	int N_real;
 	int number_networks;
 	int refresh_network;
+	int nbSplitInf; // split in E/P1/P2 compartments
+	int nbSplitVax; // split in V_LOW, V_MID
 
 	// print output
 	int print_infectors;
@@ -349,7 +371,7 @@ typedef struct PARAMS {
 	int dur_isol_inf; // infected
 	int dur_isol_rec; // recovered
 	int dur_isol_sus; // susceptible
-	int skip_iso; // pct skip islation
+	double skip_iso; // pct skip islation
 	double p_c_HH; // pct isolation in household
 	double p_rA; // pct detection contact A
 	double p_rS; // pct detection contact S
@@ -360,7 +382,7 @@ typedef struct PARAMS {
 
 	// after invasion
 	int incrVaccAccept_inplace; // 1 if 100% accept vax, 0 if opinion matters
-	int skip_iso_aft_inv; // pct skip islation
+	double skip_iso_aft_inv; // pct skip islation
 	double p_c_HH_aft_inv; // pct isolation in household
 	double p_rA_aft_inv; // pct detection contact A
 	double p_rS_aft_inv; // pct detection contact S

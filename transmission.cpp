@@ -2,7 +2,7 @@
     Simulation of an ABM for COVID-19
     @file transmission.cpp
     @author Pierre-Yves Boelle, Chiara Poletto
-    @acknowledgment Jésus A Moreno López for first version fo the code
+    @acknowledgment Jesus Moreno for earlier version
     @version 1.0 2020-04-16
     @license GPL-3.0-or-later
 */
@@ -57,7 +57,7 @@ double computepNotInf(double pInfStub, int statusContact, int noneIsolated, int 
 
 	if (!(inHousehold) && !(noneIsolated)) return(pInf); // outside household, no transmission for isolated persons
 
-    if (statusContact==102  || statusContact==13) {
+    if (statusContact==STATUS_P2  || statusContact==STATUS_AI) {
         // if neighbour is pre-asymptomatic or asymptomatic, include re-scale in transmissibility because of asymptomatic route "r_a"
         if (noneIsolated) {// if neighbour and susceptible are not isolated
         	if (isVaccinated == VAX_FUL) {   // if susceptible is vaccinated, add factor v_sus
@@ -77,7 +77,7 @@ double computepNotInf(double pInfStub, int statusContact, int noneIsolated, int 
             	pInf=1.0-pInfStub*params.r_a*params.factor_isol;
             }
         }
-     } else if (statusContact==9102  || statusContact==913) {
+     } else if (statusContact==STATUS_vP2  || statusContact==STATUS_vAI) {
     	// same as before but if contacts are pre-asymptomatics or asymptomatics vaccinated, add factor v_trans in transmission
         if (noneIsolated) {
             if (isVaccinated == VAX_FUL){
@@ -96,7 +96,7 @@ double computepNotInf(double pInfStub, int statusContact, int noneIsolated, int 
             	pInf=1.0-pInfStub*params.r_a*params.factor_isol*params.v_trans;
             }
         }
-    } else if (statusContact==101 || (statusContact==12 && inHousehold)) {
+    } else if (statusContact==STATUS_P1 || (statusContact==STATUS_SI && inHousehold)) {
         // if neighbour is pre-symptomatic or symptomatic
         if (noneIsolated) {
         	if (isVaccinated == VAX_FUL) {
@@ -115,7 +115,7 @@ double computepNotInf(double pInfStub, int statusContact, int noneIsolated, int 
         		pInf=1.0 - pInfStub*params.factor_isol;
         	}
         }
-    } else if (statusContact==9101 || (statusContact==912 && inHousehold)) {
+    } else if (statusContact==STATUS_vP1 || (statusContact==STATUS_vSI && inHousehold)) {
     	// vaccinated + presymptomatic or symptomatic
         if (noneIsolated) {
             if (isVaccinated==VAX_FUL){
@@ -202,7 +202,7 @@ int updateNotSusceptible(int i,//of ego
     
     uniform_real_distribution<double> distribution(0,1);
     // Look at exposed and determine if they leave exposed phase
-    if (status==10 && distribution(generator)<params.e_rate)
+    if (status==STATUS_E && distribution(generator)<params.e_rate)
     {
         // determine if they become subclinical
         if (distribution(generator)<a_propor)
@@ -210,45 +210,45 @@ int updateNotSusceptible(int i,//of ego
         else
             upd.P1.push_back(i);
     }
-    else if (status==910 && distribution(generator)<params.ve_rate) {
+    else if (status==STATUS_vE && distribution(generator)<params.ve_rate) {
         // Look at vaccinated exposed and determine if they leave exposed phase
         if (distribution(generator)<va_propor)
             upd.vP2.push_back(i);
         else
             upd.vP1.push_back(i);
     }
-    else if (status==101 && distribution(generator)<params.p1_rate) {
+    else if (status==STATUS_P1 && distribution(generator)<params.p1_rate) {
         // Look at presymptomatic 1 and determine if the leave to be symptomatic
         upd.SI.push_back(i);
     }
-    else if (status==9101 && distribution(generator)<params.vp1_rate) {
+    else if (status==STATUS_vP1 && distribution(generator)<params.vp1_rate) {
         // Look at vaccinated presymptomatic 1 and determine if the leave to be symptomatic
         upd.vSI.push_back(i);
     }
-    else if (status==102 && distribution(generator)<params.p2_rate) {
+    else if (status==STATUS_P2 && distribution(generator)<params.p2_rate) {
         // L	ook at presymptomatic 2 and determine if the leave to be asymptomatic
         upd.AI.push_back(i);
     }
-    else if (status==9102 && distribution(generator)<params.vp2_rate) {
+    else if (status==STATUS_vP2 && distribution(generator)<params.vp2_rate) {
         //Look at vaccinated presymptomatic 2 and determine if the leave to be asymptomatic
         upd.vAI.push_back(i);
     }
-    else if (status==12 || status==13) {
+    else if (status==STATUS_AI || status==STATUS_SI) {
         // Look at symptomatic or asymptomatic to determine if they recover
         if (distribution(generator)<params.gamm)
             upd.R.push_back(i);
     }
-    else if (status==912 || status==913) {
+    else if (status==STATUS_vAI || status==STATUS_vSI) {
         // Look at vaccinated symptomatic or asymptomatic to determine if they recover
         if (distribution(generator)<params.vgamm)
             upd.vR.push_back(i);
-    } else 	if (status==909) {
+    } else 	if (status==STATUS_vS_MID) { //909
 		if (distribution(generator)<params.w_rate_MID_to_FUL) {
 	    	//PYB - moved to updateNotSusceptible
 			// Look at vaccinated waiting to determine if they become vaccinated
 	    		upd.vS.push_back(i);
 		}
-	} else if (status==908) {
+	} else if (status==STATUS_vS_LOW) { //908
 		if(distribution(generator)<params.w_rate_LOW_to_MID) {
 	    	//PYB - moved to updateNotSusceptible
 			// Look at vaccinated waiting to determine if they become vaccinated
@@ -361,12 +361,12 @@ void transmissionStep( int real, int it,  Population & city, Vaccination & vacci
 	 for (int i{0} ; i<city.N_use ; ++i)
 	 {
 		 // note 909/908 goes both ways
-		 if (city.status[i]!=0 && city.status[i]!=90)
+		 if (city.status[i]!=STATUS_S && city.status[i]!=STATUS_vS_FUL)
 			 updateNotSusceptible(i, city.status[i], city.a_propor[i], city.va_propor[i],
 					 upd,
 					 params, generator);
 
-		 if (city.status[i]==0 || city.status[i]==90 || city.status[i]==909 || city.status[i]==908)
+		 if (city.status[i]==STATUS_S || city.status[i]==STATUS_vS_FUL || city.status[i]==STATUS_vS_MID || city.status[i]==STATUS_vS_LOW)
 			 // Look at susceptible, vaccinated susceptible and vaccinated waiting
 			 updateSusceptible(i,city,vaccination, contacts, places, it, real,
 					 upd, params,generator,simulationFiles);

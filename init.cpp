@@ -56,13 +56,13 @@ void initSeed(Population & city,Params &params, default_random_engine & generato
 	// CHOOSE INFECTED SEEDS AT RANDOM
 	if (params.typeSeeding==0) {
 		for (int k=0; k < city.N_use; k++) {
-			if (city.status[k]==0) indexForSeeds.push_back(k);
+			if (city.status[k]==STATUS_S) indexForSeeds.push_back(k);
 		}
 		cout << "initialized " << initial_cases << " exposed at random" <<endl;
 		sf.miscellaneous_file << "initialized " << initial_cases << " exposed at random" <<endl;
 		shuffle(indexForSeeds.begin(), indexForSeeds.end(),generator);
 		for (int k=0; k < initial_cases; k++)
-			city.status[indexForSeeds[k]]= 10;
+			city.status[indexForSeeds[k]]= STATUS_E;
 	} else
 		// CHOOSE INFECTED SEEDS FROM INFECTEDS IN IMMUNITY FILE
 		if (params.typeSeeding==1) {
@@ -74,8 +74,10 @@ void initSeed(Population & city,Params &params, default_random_engine & generato
 		while (k < initial_cases) {
 			int index = city.exposed_file[1][city.exposed_file[0][j]];
 			int state = city.exposed_file[2][city.exposed_file[0][j]];
-			if (state == 10) {
+			int step = city.exposed_file[3][city.exposed_file[0][j]];
+			if (state == STATUS_E) {
 				city.status[index]= state;
+				city.stepInf[index] = step;
 				k++;
 			}
 			j++;
@@ -89,8 +91,10 @@ void initSeed(Population & city,Params &params, default_random_engine & generato
 		while (k < initial_cases) {
 			int index = city.exposed_file[1][city.exposed_file[0][j]];
 			int state = city.exposed_file[2][city.exposed_file[0][j]];
+			int step = city.exposed_file[3][city.exposed_file[0][j]];
 			city.status[index]= state;
-			if (state == 10) k++;
+			city.stepInf[index]= step;
+			if (state == STATUS_S) k++;
 			j++;
 		}
 		sf.miscellaneous_file<< "initialized " << j << " cases from file with " << k << " initial_cases" <<endl;
@@ -102,7 +106,10 @@ void initSeed(Population & city,Params &params, default_random_engine & generato
 		for (int j: city.exposed_file[0]) {
 			int index = city.exposed_file[1][j];
 			int state = city.exposed_file[2][j];
+			int step = city.exposed_file[3][j];
+
 			city.status[index]= state;
+			city.stepInf[index]=step;
 			if (state == 10) k++;
 		}
 		sf.miscellaneous_file<< "initialized " << city.exposed_file[0].size() << " cases from file with " << k << " initial_cases" <<endl;
@@ -114,19 +121,25 @@ void initSeed(Population & city,Params &params, default_random_engine & generato
 		int j=0; // index of all cases
 		int k=0; // number of exposed
 		vector<int> seedStatus; // to hold the status of people
+		vector<int> seedStep; // to hold the step of people
+
 		while (k < initial_cases) {
 			int state = city.exposed_file[2][city.exposed_file[0][j]];
+			int step = city.exposed_file[3][city.exposed_file[0][j]];
 			seedStatus.push_back(state);
-			if (state == 10) k++;
+			seedStep.push_back(step);
+			if (state == STATUS_E) k++;
 			j++;
 		}
 		// then get people and allocate at random
 		for (int k=0; k < city.N_use; k++) {
-			if (city.status[k]==0) indexForSeeds.push_back(k);
+			if (city.status[k]==STATUS_S) indexForSeeds.push_back(k);
 		}
 		shuffle(indexForSeeds.begin(), indexForSeeds.end(),generator);
-		for (int k=0; k < (int) seedStatus.size(); k++)
+		for (int k=0; k < (int) seedStatus.size(); k++) {
 			city.status[indexForSeeds[k]]= seedStatus[k];
+			city.stepInf[indexForSeeds[k]]= seedStep[k];
+		}
 		sf.miscellaneous_file<< "obtained " << j << " cases from file with " << k << " exposed cases" <<endl;
 		cout << "initialized " << seedStatus.size() << " cases from file with " << initial_cases << " initial_cases and randomized in "<< indexForSeeds.size() << " people" <<endl;
 	}  else
@@ -138,11 +151,12 @@ void initSeed(Population & city,Params &params, default_random_engine & generato
 			int nSeed=3;
 			//we seed only one person at random
 			for (int k=0; k < city.N_use; k++) {
-				if (city.status[k]==0) indexForSeeds.push_back(k);
+				if (city.status[k]==STATUS_S) indexForSeeds.push_back(k);
 			}
 			shuffle(indexForSeeds.begin(), indexForSeeds.end(),generator);
 			for (int i=0; i < nSeed; i++) {
-				city.status[indexForSeeds[i]]= 10;
+				city.status[indexForSeeds[i]]= STATUS_E;
+				city.stepInf[indexForSeeds[i]]= 0;
 			}
 			cout << "initialized "<<nSeed<< "case at time 0" <<endl;
 		}
@@ -170,7 +184,7 @@ void initImmunity(Population & city, Params &params,default_random_engine& gener
 			 double p_imm= initial_imm*1.0/city.N_use;
 			 for (int i{0}; i<city.N_use ;++i)
 				 if (distribution(generator)<p_imm)
-					 city.status[i]=2;
+					 city.status[i]=STATUS_R;
 			 sf.miscellaneous_file << " immunity random at level" << p_imm*100 <<"%"<<endl;
 			 cerr << " immunity random at level" << p_imm*100 <<"%"<<endl;
 		 } else if (params.immunity_random == 2) {
@@ -191,9 +205,9 @@ void initImmunity(Population & city, Params &params,default_random_engine& gener
 			 shuffle(idxImmuneIndividuals.begin(), idxImmuneIndividuals.end(),generator);
 			 // fill in :
 			 // random part
-			 for (int i=0; i<(int) (nImmune * params.pct_rand_init_immunity);i++) city.status[idxNonImmuneIndividuals[i]]=2;
+			 for (int i=0; i<(int) (nImmune * params.pct_rand_init_immunity);i++) city.status[idxNonImmuneIndividuals[i]]=STATUS_R;
 			 // from file
-			 for (int i=(int) (nImmune*params.pct_rand_init_immunity); i<nImmune;i++) city.status[idxImmuneIndividuals[i]]=2;
+			 for (int i=(int) (nImmune*params.pct_rand_init_immunity); i<nImmune;i++) city.status[idxImmuneIndividuals[i]]=STATUS_R;
 		 }
 	 }
 	 else
@@ -201,7 +215,7 @@ void initImmunity(Population & city, Params &params,default_random_engine& gener
 		 cerr << "Immunity 0 "<<endl;
 		 sf.miscellaneous_file << "Immunity 0 "<<endl;
 		 for (int i{0}; i<city.N_use ;++i)
-				 city.status[i]=0;
+				 city.status[i]=STATUS_S;
 	 }
 }
 
@@ -286,10 +300,12 @@ void initEpid(Compartments &epid, Params &params) {
  * reset incidence
  */
 void initIncidence(Incidences & incidence, Params &params) {
+    incidence.E.resize(params.N_real,vector<int>(params.max_steps));
     incidence.P1.resize(params.N_real,vector<int>(params.max_steps));
     incidence.SI.resize(params.N_real,vector<int>(params.max_steps));
     incidence.P2.resize(params.N_real,vector<int>(params.max_steps));
     incidence.AI.resize(params.N_real,vector<int>(params.max_steps));
+    incidence.vE.resize(params.N_real,vector<int>(params.max_steps));
     incidence.vP1.resize(params.N_real,vector<int>(params.max_steps));
     incidence.vSI.resize(params.N_real,vector<int>(params.max_steps));
     incidence.vP2.resize(params.N_real,vector<int>(params.max_steps));
@@ -305,6 +321,12 @@ void initCity(Population & city,Params & params)
     // Nstatus set to susceptibles
     city.status.resize(city.N_use);
     fill(city.status.begin(),city.status.end(), 0);
+    // in step 0 for infection (E,P1,P2)
+    city.stepInf.resize(city.N_use);
+    fill(city.stepInf.begin(),city.stepInf.end(), 0);
+    // in step 0 for Vaxxination
+    city.stepVax.resize(city.N_use);
+    fill(city.stepVax.begin(),city.stepVax.end(), 0);
     // Nodes that will be detected after a delay will be passed
     city.will_be_detect.resize(city.N_use);
     fill(city.will_be_detect.begin(),city.will_be_detect.end(), 0);
@@ -320,7 +342,7 @@ void initCity(Population & city,Params & params)
     // isolated
     city.iso_time.resize(city.N_use);
     fill(city.iso_time.begin(),city.iso_time.end(),0);
-    // Time when (last) isolation begane
+    // Time when (last) isolation began
     city.iso_time.resize(city.N_use);
     fill(city.iso_time.begin(),city.iso_time.end(),0);
     
@@ -508,24 +530,24 @@ void convertParams(Params & params, MapParams & mapParams) {
 
 	// transmission
 	params.beta=mapParams["beta"];
-	params.e_rate=mapParams["e_rate"];
-	params.E_ve_rate=mapParams["E_ve_rate"];
+	params.e_rate=mapParams["e_rate"]*params.nbSplitInf; // rate is multiplied by step number
+	params.E_ve_rate=mapParams["E_ve_rate"]*params.nbSplitInf; // rate is multiplied by step number
 	params.factor_isol=mapParams["factor_isol"];
 	params.gamm=mapParams["gamm"];
-	params.p1_rate=mapParams["p1_rate"];
-	params.p2_rate=mapParams["p2_rate"];
+	params.p1_rate=mapParams["p1_rate"]*params.nbSplitInf; // rate is multiplied by step number
+	params.p2_rate=mapParams["p2_rate"]*params.nbSplitInf; // rate is multiplied by step number
 	params.r_a=mapParams["r_a"];
 	params.r_V=mapParams["r_V"]; // rate
 	params.v_sus_MID=mapParams["v_sus_MID"]; // reduction P(Inf|Vax)/P(Inf|nVax) in primoVax
 	params.v_sus_FUL=mapParams["v_sus_FUL"]; // reduction P(Inf|Vax)/P(Inf|nVax) in fullyVax
 	params.v_symp=mapParams["v_symp"]; //
 	params.v_trans=mapParams["v_trans"]; //
-	params.ve_rate=mapParams["ve_rate"]; //
+	params.ve_rate=mapParams["ve_rate"] * params.nbSplitInf; //  rate is multiplied by step number
 	params.vgamm=mapParams["vgamm"]; //
-	params.vp1_rate=mapParams["vp1_rate"]; //
-	params.vp2_rate=mapParams["vp2_rate"]; //
-	params.w_rate_MID_to_FUL=mapParams["w_rate_MID_to_FUL"]; // passage de no Protection a Mid protection
-	params.w_rate_LOW_to_MID=mapParams["w_rate_LOW_to_MID"]; // passage de mid protection a ful protection
+	params.vp1_rate=mapParams["vp1_rate"]*params.nbSplitInf;  // rate is multiplied by step number
+	params.vp2_rate=mapParams["vp2_rate"]*params.nbSplitInf;  // rate is multiplied by step number
+	params.w_rate_MID_to_FUL=mapParams["w_rate_MID_to_FUL"]*params.nbSplitVax; // passage de no Protection a Mid protection * steps number
+	params.w_rate_LOW_to_MID=mapParams["w_rate_LOW_to_MID"]*params.nbSplitVax; // passage de mid protection a ful protection * step number
 
 	//contacts
 	params.acquai_frequency=mapParams["acquai_frequency"];
@@ -595,7 +617,7 @@ void convertParams(Params & params, MapParams & mapParams) {
 	params.r_d_symp_aft_inv=mapParams["r_d_symp_aft_inv"];
 	params.will_be_d_asymp_aft_inv=mapParams["will_be_d_asymp_aft_inv"];
 	params.will_be_d_symp_aft_inv=mapParams["will_be_d_symp_aft_inv"];
-	params.skip_iso_aft_inv = mapParams["skip_iso_aft_inv_aft_inv"];
+	params.skip_iso_aft_inv = mapParams["skip_iso_aft_inv"];
 
 	//isolation
 	params.HHisolation_inplace=mapParams["HHisolation_inplace"];

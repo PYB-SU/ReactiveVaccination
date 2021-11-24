@@ -2,7 +2,7 @@
     Simulation of an ABM for COVID-19
     @file inputOutput.h
     @author Pierre-Yves Boelle, Chiara Poletto
-    @acknowledgment Jésus A Moreno López for first version fo the code
+    @acknowledgment Jesus Moreno for first version
     @version 1.0 2020-04-16
     @license GPL-3.0-or-later
 */

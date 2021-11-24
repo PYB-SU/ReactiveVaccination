@@ -2,7 +2,7 @@
     Simulation of an ABM for COVID-19
     @file inputOutput.cpp
     @author Pierre-Yves Boelle, Chiara Poletto
-    @acknowledgment Jésus A Moreno López for first version fo the code
+    @acknowledgment Jesus Moreno for first version
     @version 1.0 2020-04-16
     @license GPL-3.0-or-later
 */
@@ -49,7 +49,7 @@ using namespace std;
 void readFileNames(string fichierInput, Filenames & filenames)
 {
 	vector<string> paramNameRequired={"params","age","network","households","workplaces","schools","immunity","susceptibility","subclinical","subclinicalVaccinated"};
-	vector<string> paramNameOptional={"universities","invasion"};
+	vector<string> paramNameOptional={"universities"};
 	string param;
     ifstream ip;
 	ip.open(fichierInput);
@@ -103,8 +103,8 @@ void readFileNames(string fichierInput, Filenames & filenames)
 	}
 	filenames.universityfile = fromFile["universities"];
 	cout << "universities in " <<filenames.universityfile<<endl;
-	filenames.invasionfile = fromFile["invasion"];
-	cout << "invasion in " <<filenames.invasionfile<<endl;
+//	filenames.invasionfile = fromFile["invasion"];
+//	cout << "invasion in " <<filenames.invasionfile<<endl;
 
 }
 
@@ -119,7 +119,7 @@ void openSimulationFiles(SimulationFiles & simulationFiles, string &scenario_tag
     string filename;
 
 	string chemin = "output/" + scenario_tag;
-	cout <<"printing results to directory"<<chemin<<endl;
+	cout <<"printing results to directory "<<chemin<<endl;
 	// Creating scenario_tag directory
 	#if defined(_WIN32)
 		if (_mkdir(chemin.c_str()) == -1)
@@ -298,26 +298,32 @@ void readImmunity(Filenames & filenames, vector<int> & immune, vector<vector<int
 
         if(!ip4.is_open()) std::cout << "ERROR: could not read from" << fullFilename <<'\n';
 
-        string index, status1, status2;
+        string index, status1, status2, status3;
         getline(ip4,index,',');
         getline(ip4,status1,',');
         getline(ip4,status2,'\n');
 
-        if (index != "V2") {
+        if (index != "V3") {
         	cout << "Old version of immunity files\nRun vaccination.exe -i to regenerate immunity files\n";
         	exit(1);
         }
         int n=0;
         while(ip4.good())
         {
-            getline(ip4,index,',');
-            getline(ip4,status1,',');
-            getline(ip4,status2,'\n');
+            getline(ip4,index,','); // ID
+            getline(ip4,status1,','); //0 for S,E /2 for others
+            getline(ip4,status2,','); // status
+            getline(ip4,status3,'\n'); // step
             immune.push_back(stoi(status1));
-            if(status2 != "0") {
+            if(status2 != "0") { // this is not a susceptible
             	exposed[0].push_back(n); // vector of exposed
-            	exposed[1].push_back(stoi(index)); // vector of exposed
-            	exposed[2].push_back(stoi(status2)); // vector of exposed
+            	exposed[1].push_back(stoi(index)); // vector of 0/2
+            	exposed[2].push_back(stoi(status2)); // vector of status
+            	if(stoi(status3) < params.nbSplitInf) {
+            		exposed[3].push_back(stoi(status3)); // if  step compatible put step
+            	} else {
+            		exposed[3].push_back(params.nbSplitInf); // if step incompatible, put max
+            	}
             	n++;
             }
         }
@@ -325,33 +331,7 @@ void readImmunity(Filenames & filenames, vector<int> & immune, vector<vector<int
     }
 }
 
-/*
- * read invasion file. file of index of cases
- */
-void readInvasion(Filenames & filenames, vector<vector<int>> & invasion) {
-    ifstream ip4;
 
-    string fullFilename = filenames.invasionfile;
-    cout << "reading invasion from " << fullFilename<<endl;
-    ip4.open(fullFilename);
-
-    if(!ip4.is_open()) std::cout << "ERROR: could not read from" << fullFilename <<'\n';
-
-    //file is a list of indices in the order of apparition
-    int n=0;
-    string line;
-    while (getline(ip4,line)) {
-    	string item;
-    	istringstream sstr(line);
-    	// Read in an item
-    	while (getline(sstr, item, ','))
-    	{
-    		invasion[n].push_back(stoi(item));
-    	}
-    	n++;
-    }
-    ip4.close();
-}
 
 
 /*
@@ -447,7 +427,7 @@ void readPopulation(Filenames & filenames, Population & city,  int*numFirstIndiv
 	ip3.close();
 
 	if (params.computeImmunity==0) {
-		city.exposed_file.resize(3);
+		city.exposed_file.resize(4); //to store 4 rows
 		readImmunity(filenames, city.status_file, city.exposed_file, params);
 	} else {
 		cout << "immunity set to 0" << endl;
@@ -570,7 +550,7 @@ void readHouseholdSchoolWorkplaces(Filenames & filenames, Places&places) {
 			getline(ip,idUniv,'\n');
 			places.universities.insert(idUniv);
 		}
-		cout <<"read "<<places.universities.size()<< "universities"<<endl;
+		cout <<"read "<<places.universities.size()<< " universities"<<endl;
 		for (string univ: places.universities) {
 			while (places.S_nodes[univ].size()>0) {
 				places.WP_nodes[univ].push_back(places.S_nodes[univ].back());
@@ -581,6 +561,31 @@ void readHouseholdSchoolWorkplaces(Filenames & filenames, Places&places) {
 			places.S_nodes.erase(univ);
 		}
 	}
+}
+
+/*
+ * writeIncidenceFile
+ * */
+void writeIncidenceFile(const string  compartiment, vector<vector<int>> & incid, string & scenario_tag, Params & params) {
+
+	string name ="output/"+scenario_tag+"/inc"+compartiment+"_"+ scenario_tag+".csv";
+	ofstream csvfile(name);
+	    if (csvfile.is_open())
+	    {   csvfile << "time";
+
+	        for (int n=0; n<params.N_real ; n++)
+	        {   string real_head = to_string(n);
+	            csvfile << "," << real_head ;}
+	        csvfile << endl;
+
+	        for (int j=0; j<params.max_steps ; j++)
+	        {   csvfile << j;
+	            for (int i=0; i<params.N_real ; i++)
+	            {csvfile << "," << incid[i][j];}
+	            csvfile << endl; }
+	    	csvfile.close();
+	    } else
+	    {cout << "File "<<name <<" could not be opened";}
 }
 
 /*
@@ -699,164 +704,18 @@ void writeAverageFiles(int N_use, Compartments & allEpids, Incidences & incidenc
 
 
     // PRINT OUT INCIDENCES RUN BY RUN
-    string name ="output/"+scenario_tag+"/incP1"+param1+".csv";
-    ofstream csvfile(name);
-    if (csvfile.is_open())
-    {   csvfile << "time";
+    writeIncidenceFile("E", incidence.E, scenario_tag, params);
+    writeIncidenceFile("P1", incidence.P1, scenario_tag, params);
+    writeIncidenceFile("P2", incidence.P2, scenario_tag, params);
+    writeIncidenceFile("SI", incidence.SI, scenario_tag, params);
+    writeIncidenceFile("AI", incidence.AI, scenario_tag, params);
+    writeIncidenceFile("vE", incidence.vE, scenario_tag, params);
+    writeIncidenceFile("vP1", incidence.vP1, scenario_tag, params);
+    writeIncidenceFile("vP2", incidence.vP2, scenario_tag, params);
+    writeIncidenceFile("vSI", incidence.vSI, scenario_tag, params);
+    writeIncidenceFile("vAI", incidence.vAI, scenario_tag, params);
 
-        for (int n=0; n<params.N_real ; n++)
-        {   string real_head = to_string(n);
-            csvfile << "," << real_head ;}
-        csvfile << endl;
 
-        for (int j=0; j<params.max_steps ; j++)
-        {   csvfile << j;
-            for (int i=0; i<params.N_real ; i++)
-            {csvfile << "," << incidence.P1[i][j];}
-            csvfile << endl; }
-    	csvfile.close();
-    } else
-    {cout << "File "<<name <<" could not be opened";}
-
-    string name2 ="output/"+scenario_tag+"/incP2"+param1+".csv";
-    ofstream csvfile2(name2);
-    if (csvfile2.is_open())
-    {   csvfile2 << "time";
-
-        for (int n=0; n<params.N_real ; n++)
-        {   string real_head = to_string(n);
-            csvfile2 << "," << real_head ;}
-        csvfile2 << endl;
-
-        for (int j=0; j<params.max_steps ; j++)
-        {   csvfile2 << j;
-            for (int i=0; i<params.N_real ; i++)
-            {csvfile2 << "," << incidence.P2[i][j];}
-            csvfile2 << endl; }
-    	csvfile2.close();
-    }
-    else
-    {cout << "File "<< name2 <<" could not be opened";}
-
-    string name3 ="output/"+scenario_tag+"/incSI"+param1+".csv";
-    ofstream csvfile3(name3);
-    if (csvfile3.is_open())
-    {   csvfile3 << "time";
-
-        for (int n=0; n<params.N_real ; n++)
-        {   string real_head = to_string(n);
-            csvfile3 << "," << real_head ;}
-        csvfile3 << endl;
-
-        for (int j=0; j<params.max_steps ; j++)
-        {   csvfile3 << j;
-            for (int i=0; i<params.N_real ; i++)
-            {csvfile3 << "," << incidence.SI[i][j];}
-            csvfile3 << endl; }
-    	csvfile3.close();
-    }
-    else
-    {cout << "File "<< name3<<" could not be opened";}
-
-    string name4 ="output/"+scenario_tag+"/incAI"+param1+".csv";
-    ofstream csvfile4(name4);
-    if (csvfile4.is_open())
-    {   csvfile4 << "time";
-
-        for (int n=0; n<params.N_real ; n++)
-        {   string real_head = to_string(n);
-            csvfile4 << "," << real_head ;}
-        csvfile4 << endl;
-
-        for (int j=0; j<params.max_steps ; j++)
-        {   csvfile4 << j;
-            for (int i=0; i<params.N_real ; i++)
-            {csvfile4 << "," << incidence.AI[i][j];}
-            csvfile4 << endl; }
-    	csvfile4.close();
-    }
-    else
-    {cout << "File "<< name4<<" could not be opened";}
-
-    string namev ="output/"+scenario_tag+"/incvP1"+param1+".csv";
-    ofstream csvfilev(namev);
-    if (csvfilev.is_open())
-    {   csvfilev << "time";
-
-        for (int n=0; n<params.N_real ; n++)
-        {   string real_head = to_string(n);
-            csvfilev << "," << real_head ;}
-        csvfilev << endl;
-
-        for (int j=0; j<params.max_steps ; j++)
-        {   csvfilev << j;
-            for (int i=0; i<params.N_real ; i++)
-            {csvfilev << "," << incidence.vP1[i][j];}
-            csvfilev << endl; }
-    	csvfilev.close();
-    }
-    else
-    {cout << "File "<< namev<<" could not be opened";}
-
-    string name2v="output/"+scenario_tag+"/incvP2"+param1+".csv";
-    ofstream csvfile2v(name2v);
-    if (csvfile2v.is_open())
-    {   csvfile2v << "time";
-
-        for (int n=0; n<params.N_real ; n++)
-        {   string real_head = to_string(n);
-            csvfile2v << "," << real_head ;}
-        csvfile2v << endl;
-
-        for (int j=0; j<params.max_steps ; j++)
-        {   csvfile2v << j;
-            for (int i=0; i<params.N_real ; i++)
-            {csvfile2v << "," << incidence.vP2[i][j];}
-            csvfile2v << endl; }
-    	csvfile2v.close();
-    }
-    else
-    {cout << "File "<<name2v <<" could not be opened";}
-
-    string name3v ="output/"+scenario_tag+"/incvSI"+param1+".csv";
-    ofstream csvfile3v(name3v);
-    if (csvfile3v.is_open())
-    {   csvfile3v << "time";
-
-        for (int n=0; n<params.N_real ; n++)
-        {   string real_head = to_string(n);
-            csvfile3v << "," << real_head ;}
-        csvfile3v << endl;
-
-        for (int j=0; j<params.max_steps ; j++)
-        {   csvfile3v << j;
-            for (int i=0; i<params.N_real ; i++)
-            {csvfile3v << "," << incidence.vSI[i][j];}
-            csvfile3v << endl; }
-    	csvfile3v.close();
-    }
-    else
-    {cout << "File "<<name3v <<" could not be opened";}
-
-    string name4v ="output/"+scenario_tag+"/incvAI"+param1+".csv";
-    ofstream csvfile4v(name4v);
-    if (csvfile4v.is_open())
-    {   csvfile4v << "time";
-
-        for (int n=0; n<params.N_real ; n++)
-        {   string real_head = to_string(n);
-            csvfile4v << "," << real_head ;}
-        csvfile4v << endl;
-
-        for (int j=0; j<params.max_steps ; j++)
-        {   csvfile4v << j;
-            for (int i=0; i<params.N_real ; i++)
-            {csvfile4v << "," << incidence.vAI[i][j];}
-            csvfile4v << endl; }
-    	csvfile4v.close();
-    }
-    else
-    {cout << "File "<<name4v <<" not be opened";}
 
 }
 
@@ -876,7 +735,7 @@ void writeIdxSim(vector<int> idxSim, string scenario_tag) {
     save_csv_int_vec(final_name, idxSim);
 }
 
-void writeImmunity(int t, Population & city, int prev) {
+void writeImmunityV2(int t, Population & city, int prev) {
 // write the status of persons for a range of values of immunity in the 0 - 30 range.
 	// Creating scenario_tag directory
 	string chemin;
@@ -896,14 +755,48 @@ void writeImmunity(int t, Population & city, int prev) {
 	outfile << "V2,immune,infected - t=" << t <<endl;
 	for (int i=0; i<city.N_use; i++) {
 		outfile << i;
-		if (city.status[i]==0)
+		if (city.status[i]==STATUS_S)
 			outfile << ",0,0" <<endl;
-		else if(city.status[i]==2)
+		else if(city.status[i]==STATUS_R)
 			outfile << ",2,0" <<endl;
-		else if (city.status[i]==10)
+		else if (city.status[i]==STATUS_E)
 			outfile << ",0,"<<city.status[i] <<endl;
 		else
 			outfile << ",2,"<<city.status[i] <<endl;
+	}
+	outfile.close();
+	cout << "wrote "<<filename<< " t= " << t << "\n";
+}
+
+void writeImmunity(int t, Population & city, int prev) {
+// write the status of persons for a range of values of immunity in the 0 - 30 range.
+	// Creating scenario_tag directory
+	// here we are in v3, recording steps in E/P1/P2
+	// Format is : idx, 0=!R/2=R,0!=E/STATUS_E, 0/STEP_E
+	string chemin;
+	chemin ="output/immunity";
+
+	#if defined(_WIN32)
+		if (_mkdir(chemin.c_str()) == -1)
+		cout<<"created "<< chemin;
+	#else
+		if (mkdir(chemin.c_str(), 0777) == -1)
+		cout<<"created "<< chemin;
+	#endif
+
+	string filename;
+	filename= "output/immunity/status_file_" + to_string(prev) + ".csv";
+	ofstream outfile;
+	outfile.open(filename);
+	outfile << "V3,immune,status,step, t=" << t <<endl;
+	for (int i=0; i<city.N_use; i++) {
+		outfile << i << "," ;
+		if ((city.status[i]==STATUS_S) || (city.status[i] == STATUS_E)) {
+			outfile << "0,";
+		} else {
+			outfile << "2,";
+		}
+		outfile << city.status[i] <<","<<city.stepInf[i]<<endl;
 	}
 	outfile.close();
 	cout << "wrote "<<filename<< " t= " << t << "\n";
@@ -944,6 +837,8 @@ void printParams(Params & params) {
 	cout <<"max_steps: " << params.max_steps << endl;
 	cout <<"N_real: " << params.N_real << endl;
 	cout <<"n_start_reactive: " << params.n_start_reactive << endl;
+	cout <<"nbSplitInf: " << params.nbSplitInf << endl;
+	cout <<"nbSplitVax: " << params.nbSplitVax << endl;
 	cout <<"number_networks: " << params.number_networks << endl;
 	cout <<"p_c_HH: " << params.p_c_HH << endl;
 	cout <<"p_rA: " << params.p_rA << endl;

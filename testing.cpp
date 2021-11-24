@@ -2,7 +2,6 @@
     Simulation of an ABM for COVID-19
     @file screening.h
     @author Pierre-Yves Boelle, Chiara Poletto
-    @acknowledgment Jésus A Moreno López for first version fo the code
     @version 1.0 2020-04-16
     @license GPL-3.0-or-later
 */
@@ -70,7 +69,7 @@ void caseDetection(Population & city, Params &params, default_random_engine & ge
 		// not detected or scheduled for detection
 		if ((city.detected[i] == 0) && (city.will_be_detect[i]==0)) {
 			//symptomatic & will be detected
-			if ((city.status[i]==12) || (city.status[i]==912)) {
+			if ((city.status[i]==STATUS_SI) || (city.status[i]==STATUS_vSI)) {
 				if (distribution(generator)<params.will_be_d_symp) {
 					// scheduled for symptomatic
 					city.will_be_detect[i]=1;
@@ -79,7 +78,7 @@ void caseDetection(Population & city, Params &params, default_random_engine & ge
 				}
 			}
 			// asymptomatic and will be detected
-			else if ((city.status[i]==13) || (city.status[i]==913)) {
+			else if ((city.status[i]==STATUS_AI) || (city.status[i]==STATUS_vAI)) {
 				if (distribution(generator)<params.will_be_d_asymp) {
 					city.will_be_detect[i]=2;
 				}
@@ -155,7 +154,7 @@ int testThisPerson(int j, int loc, Population & city, Testing & testing, Compart
 	if ((city.detected[j]==0) && (city.will_be_detect[j]==0))
 	{
 		//symptomatic
-		if (city.status[j]==12 || city.status[j]==912 || city.status[j]==101 || city.status[j]==9101)
+		if (city.status[j]==STATUS_SI || city.status[j]==STATUS_vSI || city.status[j]==STATUS_P1 || city.status[j]==STATUS_vP1)
 		{
 			upd.detected.push_back(j); // this will put detected to 1
 			//it is detected and traced
@@ -166,7 +165,7 @@ int testThisPerson(int j, int loc, Population & city, Testing & testing, Compart
 			return(1);
 		}
 		//asymptomatic
-		else if (city.status[j]==13 || city.status[j]==913 || city.status[j]==102 || city.status[j]==9102)
+		else if (city.status[j]==STATUS_AI || city.status[j]==STATUS_vAI || city.status[j]==STATUS_P2 || city.status[j]==STATUS_vP2)
 		{
 			upd.detected.push_back(j); // updated later
 			//it is detected and traced

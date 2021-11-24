@@ -59,8 +59,8 @@ void vaccinate_elderly(Vaccination & vaccination, Population & city, Params & pa
     for (int i{0}; i<city.N_use ;++i)
     if (city.Age[i]> params.age_vax_elderly_th && vaccination.vaccination_opinion[i]==0)
         if (vaccination.vaccinated[i]==VAX_NOT && distribution(generator)<params.frac_elderly_vacc/100.) {
-            if (city.status[i]==0) {
-            	city.status[i]= 90 ;
+            if (city.status[i]==STATUS_S) {
+            	city.status[i]= STATUS_vS_FUL ;
             	vaccination.vaccinated[i]= VAX_FUL;
             }
             else
@@ -76,8 +76,8 @@ void vaccinate_adults(Vaccination & vaccination, Population & city, Params & par
     for (int i{0}; i<city.N_use ;++i) {
     	if (city.Age[i]<= params.age_vax_elderly_th && city.Age[i]> params.age_th && vaccination.vaccination_opinion[i]==0)
     		if (vaccination.vaccinated[i]==VAX_NOT && distribution(generator)<params.frac_init_vacc/100.) {
-    			if (city.status[i]==0) {
-    				city.status[i]= 90;
+    			if (city.status[i]==STATUS_S) {
+    				city.status[i]= STATUS_vS_FUL;
     				vaccination.vaccinated[i]= VAX_FUL;
     			}
     			else { // si pas susceptible , mis comme vacciné
@@ -167,11 +167,12 @@ void doVaccination(vector<int> & peopleToVaccinate, int & total_counter, int & l
 	while (total_counter< limit_pop &&
 			nv < limit_daily && peopleToVaccinate.size()>0) {
 		int idxToVaccinate = peopleToVaccinate.back();
-		if (city.status[idxToVaccinate]==0)
+		if (city.status[idxToVaccinate]==STATUS_S)
 		{ // si susceptible, entre dans la vaccination
 			//PYB - primoVaccination, put 8
-			city.status[idxToVaccinate] = 908 ;
+			city.status[idxToVaccinate] = STATUS_vS_LOW ;
 			vaccination.vaccinated[idxToVaccinate] = VAX_LOW;
+			city.stepVax[idxToVaccinate]=1; // first step vaccination
 		} else
 		{ // infecté non vacciné met vacciné, les autres sont déjà vaccinés
 			vaccination.vaccinated[idxToVaccinate] = VAX_FUL;
@@ -203,7 +204,7 @@ void random_vaccination(int t, Vaccination & vaccination, Population & city, Pla
 			vaccination.allNotVaccinated.clear();
 			// get a list of all unvaccinated
 			for (int i=0; i < city.N_use; i++) {
-				if (vaccination.vaccinated[i] == VAX_NOT && city.status[i]!=12 && city.Age[i]> params.age_th && vaccination.vaccination_opinion[i]==0) {
+				if (vaccination.vaccinated[i] == VAX_NOT && city.status[i]!=STATUS_SI && city.Age[i]> params.age_th && vaccination.vaccination_opinion[i]==0) {
 					if (find(vaccination.peopleToVaccinateRandom.begin(), vaccination.peopleToVaccinateRandom.end(),i) == vaccination.peopleToVaccinateRandom.end())  {
 						vaccination.allNotVaccinated.push_back(i);
 					}
@@ -217,7 +218,7 @@ void random_vaccination(int t, Vaccination & vaccination, Population & city, Pla
 			// Filling vector of individuals to vaccinate for random vaccination of the workers
 			for(map<int,string>::iterator iter = places.node_WP.begin(); iter != places.node_WP.end(); ++iter) {
 				int i= iter->first;
-				if (vaccination.vaccinated[i] == VAX_NOT && city.status[i]!=12 && city.Age[i]> params.age_th && vaccination.vaccination_opinion[i]==0)
+				if (vaccination.vaccinated[i] == VAX_NOT && city.status[i]!=STATUS_SI && city.Age[i]> params.age_th && vaccination.vaccination_opinion[i]==0)
 					vaccination.allNotVaccinated.push_back(i);
 			}
 			choosePeopleToVaccinate(vaccination, params, generator);
@@ -228,7 +229,7 @@ void random_vaccination(int t, Vaccination & vaccination, Population & city, Pla
 			// Filling vector of individuals to vaccinate for random vaccination of the workers and students
 			for(map<int,string>::iterator iter = places.node_WP.begin(); iter != places.node_WP.end(); ++iter) {
 				int i= iter->first;
-				if (vaccination.vaccinated[i] == VAX_NOT && city.status[i]!=12 && city.Age[i]> params.age_th && vaccination.vaccination_opinion[i]==0)
+				if (vaccination.vaccinated[i] == VAX_NOT && city.status[i]!=STATUS_SI && city.Age[i]> params.age_th && vaccination.vaccination_opinion[i]==0)
 					if (find(vaccination.peopleToVaccinateRandom.begin(), vaccination.peopleToVaccinateRandom.end(),i) == vaccination.peopleToVaccinateRandom.end())  {
 						// not to be vaccinated already
 						vaccination.allNotVaccinated.push_back(i);
@@ -236,7 +237,7 @@ void random_vaccination(int t, Vaccination & vaccination, Population & city, Pla
 			}
 			for(map<int,string>::iterator iter = places.node_S.begin(); iter != places.node_S.end(); ++iter) {
 				int i= iter->first;
-				if (vaccination.vaccinated[i] == VAX_NOT && city.status[i]!=12 && city.Age[i]> params.age_th && vaccination.vaccination_opinion[i]==0)
+				if (vaccination.vaccinated[i] == VAX_NOT && city.status[i]!=STATUS_SI && city.Age[i]> params.age_th && vaccination.vaccination_opinion[i]==0)
 					if (find(vaccination.peopleToVaccinateRandom.begin(), vaccination.peopleToVaccinateRandom.end(),i) == vaccination.peopleToVaccinateRandom.end())  {
 						vaccination.allNotVaccinated.push_back(i);
 					}
@@ -261,7 +262,7 @@ void random_vaccination(int t, Vaccination & vaccination, Population & city, Pla
 				if (vaccination.WP_is_not_vaccinated.size()==0) cont=1; // no more WPs to vaccinate
 				// put people in the vaccination list
 				for (int i: places.WP_nodes[*it]) {
- 					if (vaccination.vaccinated[i] == VAX_NOT && city.status[i]!=12 && city.Age[i]> params.age_th && vaccination.vaccination_opinion[i]==0 && city.isolation[t-1][i]==0) {
+ 					if (vaccination.vaccinated[i] == VAX_NOT && city.status[i]!=STATUS_SI && city.Age[i]> params.age_th && vaccination.vaccination_opinion[i]==0 && city.isolation[t-1][i]==0) {
 						if (find(vaccination.peopleToVaccinateRandom.begin(), vaccination.peopleToVaccinateRandom.end(),i) == vaccination.peopleToVaccinateRandom.end())  {
 							vaccination.peopleToVaccinateRandom.push_back(i);
 							nb_vaxx++;
@@ -295,7 +296,7 @@ void random_vaccination(int t, Vaccination & vaccination, Population & city, Pla
 					// we need the houshold of this person
 					string HH = places.node_HH[j];
 					for (int i : places.HH_nodes[HH]) { // loop on people in the HH
-						if (vaccination.vaccinated[i] == VAX_NOT && city.status[i]!=12 && city.Age[i]> params.age_th && vaccination.vaccination_opinion[i]==0) {
+						if (vaccination.vaccinated[i] == VAX_NOT && city.status[i]!=STATUS_SI && city.Age[i]> params.age_th && vaccination.vaccination_opinion[i]==0) {
 							if (find(vaccination.peopleToVaccinateRandom.begin(), vaccination.peopleToVaccinateRandom.end(),i) == vaccination.peopleToVaccinateRandom.end()) {
 								// not to be vaccinated already
 								vaccination.peopleToVaccinateRandom.push_back(i);
@@ -356,7 +357,7 @@ void vaccinateInWorkingPLacesAndSchools(int real, int it, set<string> WPS_to_vac
         				++ previously_v;
         			} else {
         				// I don't vaccinate if it is a clinical case
-        				if (city.status[i]==12) {
+        				if (city.status[i]==STATUS_SI) {
         					++ clinical;
         				} else {
         					// If it is not too young
@@ -366,14 +367,14 @@ void vaccinateInWorkingPLacesAndSchools(int real, int it, set<string> WPS_to_vac
         							vaccination.peopleToVaccinateReactive.push_back(i);
         							// I VACCINATE
         							// If it is susceptible I change status to vaccinated waiting
-        							if (city.status[i]==0) {
-//        								city.status[i] = 909 ;
-//        								vaccination.vaccinated[i] = 9;
+        							if (city.status[i]==STATUS_S) {
+//        								city.status[i] = STATUS_vS_MID ;
+//        								vaccination.vaccinated[i] = VAX_MID;
         								++ v_success;
         							}
         							// If it is not susceptible I assume the vaccine does not have effect
         							else {
-//        								vaccination.vaccinated[i] = 1;
+//        								vaccination.vaccinated[i] = VAX_FUL;
         								++ v_wasted;
         							}
         							++vacc;
@@ -425,7 +426,7 @@ void vaccinateInHouseholds(int real, int it, set <string> HH_to_vaccinate, Vacci
                 else
                 {
                     // I don't vaccinate if it is a clinical case
-                    if (city.status[i]==12)
+                    if (city.status[i]==STATUS_SI)
                         ++ clinical;
                     else
                     {
@@ -438,16 +439,16 @@ void vaccinateInHouseholds(int real, int it, set <string> HH_to_vaccinate, Vacci
                                 // I VACCINATE
     							vaccination.peopleToVaccinateReactive.push_back(i);
                                 // If it is susceptible I change status to vaccinated waiting
-                                if (city.status[i]==0)
+                                if (city.status[i]==STATUS_S)
                                 {
-//                                    city.status[i] = 909 ;
-//                                    vaccination.vaccinated[i] = 9;
+//                                    city.status[i] = STATUS_vS_MID ;
+//                                    vaccination.vaccinated[i] = VAX_MID;
                                     ++ v_success;
                                 }
                                 // If it is not susceptible I assume the vaccine does not have effect
                                 else
                                 {
-//                                	vaccination.vaccinated[i] = 1;
+//                                	vaccination.vaccinated[i] = VAX_FUL;
                                     ++ v_wasted;
                                 }
 
